@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: api
+    environment:
+      ConnectionStrings__App: "Host=postgres;Database=pulse;Username=pulse_app;Password=${PULSE_APP_PASSWORD:?Set app password}"
+      ConnectionStrings__Auth: "Host=postgres;Database=pulse;Username=pulse_auth;Password=${PULSE_AUTH_PASSWORD:?Set auth password}"
+      ConnectionStrings__Redis: "redis:6379,abortConnect=false"
+      Secrets__JwtSigningKey: "${Secrets__JwtSigningKey:?Set JWT secret}"
+      Secrets__ApiKeyHmacKey: "${Secrets__ApiKeyHmacKey:?Set HMAC secret}"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    deploy:
+      replicas: 2
+  worker:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: worker
+    environment:
+      ConnectionStrings__App: "Host=postgres;Database=pulse;Username=pulse_app;Password=${PULSE_APP_PASSWORD:?Set app password}"
+      ConnectionStrings__Auth: "Host=postgres;Database=pulse;Username=pulse_auth;Password=${PULSE_AUTH_PASSWORD:?Set auth password}"
+      ConnectionStrings__Redis: "redis:6379,abortConnect=false"
+      ConnectionStrings__Maintenance: "Host=postgres;Database=pulse;Username=postgres;Password=${POSTGRES_PASSWORD:?Set postgres password}"
+    depends_on: [api]
+  proxy:
+    image: nginx:1.27-alpine
+    ports: ["127.0.0.1:5082:80"]
+    volumes: ["./nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
+    depends_on: [api]

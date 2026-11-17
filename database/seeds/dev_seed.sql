@@ -1,0 +1,2 @@
+-- Deliberately no users, passwords, API keys or sample tenant data.
+-- Role catalog is inserted by the EF migration. Use bootstrap and secured APIs for data.

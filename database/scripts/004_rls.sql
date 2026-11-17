@@ -1,0 +1,47 @@
+GRANT USAGE ON SCHEMA public TO pulse_app,pulse_auth;
+GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO pulse_app;
+REVOKE ALL ON app_users,app_roles,app_user_roles,app_user_claims,app_role_claims,app_user_logins,app_user_tokens,user_refresh_tokens,tenants FROM pulse_app;
+GRANT SELECT,INSERT,UPDATE,DELETE ON app_users,app_roles,app_user_roles,app_user_claims,app_role_claims,app_user_logins,app_user_tokens,user_refresh_tokens,tenants TO pulse_auth;
+GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO pulse_auth;
+ALTER TABLE tenant_rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_rate_limits FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON tenant_rate_limits TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE devices FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON devices TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE device_api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE device_api_keys FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON device_api_keys TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE telemetry_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE telemetry_events FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON telemetry_events TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE telemetry_idempotency ENABLE ROW LEVEL SECURITY;
+ALTER TABLE telemetry_idempotency FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON telemetry_idempotency TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE alert_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alert_rules FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON alert_rules TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE rule_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rule_versions FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON rule_versions TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE suppression_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppression_policies FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON suppression_policies TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alerts FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON alerts TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE alert_transitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alert_transitions FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON alert_transitions TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE hourly_rollups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hourly_rollups FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON hourly_rollups TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+ALTER TABLE outbox_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE outbox_messages FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON outbox_messages TO pulse_app USING(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=nullif(current_setting('pulse.tenant_id',true),'')::uuid);
+-- Auth has no table access to device credentials. Narrow SECURITY DEFINER lookup below.
+DO $$ BEGIN
+ IF to_regclass('public."__EFMigrationsHistory"') IS NOT NULL THEN
+  REVOKE ALL ON "__EFMigrationsHistory" FROM pulse_app,pulse_auth;
+ END IF;
+END $$;

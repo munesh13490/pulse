@@ -1,0 +1,10 @@
+using Microsoft.Extensions.Hosting;
+using Pulse.Infrastructure;
+using Pulse.Worker;
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddPulse(builder.Configuration);
+builder.Services.AddHostedService<RuleEvaluationWorker>();
+builder.Services.AddHostedService<OutboxWorker>();
+builder.Services.AddHostedService<RollupWorker>();
+builder.Services.AddHostedService<RetentionWorker>();
+await builder.Build().RunAsync();

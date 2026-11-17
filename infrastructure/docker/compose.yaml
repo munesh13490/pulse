@@ -1,0 +1,31 @@
+name: pulse
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pulse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PULSE_APP_PASSWORD: ${PULSE_APP_PASSWORD:?Set PULSE_APP_PASSWORD}
+      PULSE_AUTH_PASSWORD: ${PULSE_AUTH_PASSWORD:?Set PULSE_AUTH_PASSWORD}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  postgres-data:
+  redis-data:
