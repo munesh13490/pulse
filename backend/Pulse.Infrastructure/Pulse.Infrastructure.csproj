@@ -1,1 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup></PropertyGroup><ItemGroup><ProjectReference Include="../Pulse.Application/Pulse.Application.csproj" /><PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" /><PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.8" /><PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" /><PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" /><PackageReference Include="StackExchange.Redis" Version="2.8.31" /><FrameworkReference Include="Microsoft.AspNetCore.App" /><EmbeddedResource Include="../../database/scripts/*.sql" Exclude="../../database/scripts/001_create_roles_and_database.sql" Link="Sql/%(Filename)%(Extension)" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pulse.Application/Pulse.Application.csproj" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.31" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <EmbeddedResource Include="../../database/scripts/*.sql" Exclude="../../database/scripts/001_create_roles_and_database.sql" Link="Sql/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

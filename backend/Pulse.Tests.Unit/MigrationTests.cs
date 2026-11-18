@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Xunit;
+
 namespace Pulse.Tests.Unit;
 
 public sealed class MigrationTests
@@ -17,6 +18,7 @@ public sealed class MigrationTests
         Assert.Contains("maintain_telemetry_partitions", script);
         Assert.Contains("20261117000100_Initial", script);
     }
+
     [Fact]
     public void MigrationEmbedsEverySchemaScriptInOrder()
     {

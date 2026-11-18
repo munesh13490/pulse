@@ -91,6 +91,7 @@ This executes SQL in PostgreSQL WASM, including seeded RLS and transition checks
 - [Database authority, role boundaries and retention](docs/database/README.md).
 - [SQL scripts](database/scripts/002_create_tables.sql).
 - [Execution plan](docs/architecture/execution-plan.md).
+- [Backend folders, services and repositories](docs/architecture/backend-structure.md).
 - [Future Azure migration guide](docs/deployment/azure-migration-plan.md). Documentation only.
 
 EF Core migrations are the deployment authority. Scripts 002–006 are embedded verbatim in the initial migration. Script 001 is cluster setup and must not run against the Compose-created database; Compose already creates the database and roles. Standalone scripts are for an empty alternative deployment and must never be applied on top of an EF-migrated schema.

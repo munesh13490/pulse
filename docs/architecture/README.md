@@ -1,4 +1,6 @@
 # Local architecture
+
+See [backend folder and dependency guide](backend-structure.md) for the segregated .NET structure and conventions.
 Domain contains validation, rule math and alert-state policy. Application defines provider contracts and DTOs. Infrastructure provides PostgreSQL, Identity hashing, JWT, environment secrets, Redis quotas/pubsub and SQL-first EF migrations. API applies authentication, role checks and tenant scopes. Worker hosts independent retryable evaluation, outbox, rollup and retention services.
 
 All tenant data access uses pulse_app and a transaction-local tenant setting. Identity administration and credential lookup use pulse_auth. Device key lookup is a narrowly granted SECURITY DEFINER function. Migration/maintenance credentials are excluded from request-serving paths. No Azure SDK is referenced.

@@ -1,1 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker"><PropertyGroup></PropertyGroup><ItemGroup><ProjectReference Include="../Pulse.Infrastructure/Pulse.Infrastructure.csproj" /><PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Pulse.Infrastructure/Pulse.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+  </ItemGroup>
+</Project>

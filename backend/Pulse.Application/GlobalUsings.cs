@@ -1,0 +1,16 @@
+global using Pulse.Application.Abstractions.Repositories;
+global using Pulse.Application.Abstractions.Services;
+global using Pulse.Application.Abstractions.Security;
+global using Pulse.Application.Abstractions.Messaging;
+global using Pulse.Application.Abstractions.RateLimiting;
+global using Pulse.Application.Abstractions.Observability;
+global using Pulse.Application.Models.Identity;
+global using Pulse.Application.Models.Devices;
+global using Pulse.Application.Models.Alerts;
+global using Pulse.Application.Models.Requests;
+global using Pulse.Application.Models.Telemetry;
+global using Pulse.Application.Models.Tenants;
+global using Pulse.Domain.Telemetry;
+global using Pulse.Domain.Rules;
+global using Pulse.Domain.Alerts;
+global using Pulse.Application.Validation;

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Pulse.Domain;
 using Pulse.Infrastructure;
 using Xunit;
+
 namespace Pulse.Tests.Unit;
 
 public sealed class PolicyTests
@@ -13,9 +14,9 @@ public sealed class PolicyTests
     [InlineData(-73, false)]
     [InlineData(0, true)]
     [InlineData(1, false)]
-    public void EventTimeBoundary(int hours, bool valid) =>
-        Assert.Equal(valid, TelemetryPolicy.Validate(new(Guid.NewGuid(), Now.AddHours(hours), "temp", 12), Now) is null);
-    [Fact] public void EmptyEventIdRejected() => Assert.NotNull(TelemetryPolicy.Validate(new(Guid.Empty, Now, "temp", 1), Now));
+    public void EventTimeBoundary(int hours, bool valid) => Assert.Equal(valid, TelemetryPolicy.Validate(new(Guid.NewGuid(), Now.AddHours(hours), "temp", 12), Now) is null);
+    [Fact]
+    public void EmptyEventIdRejected() => Assert.NotNull(TelemetryPolicy.Validate(new(Guid.Empty, Now, "temp", 1), Now));
     [Theory]
     [InlineData(double.NaN)]
     [InlineData(double.PositiveInfinity)]
@@ -36,16 +37,21 @@ public sealed class PolicyTests
     [Fact]
     public void KeyDigestsRequireSamePepper()
     {
-        var key = KeyMaterial.Random(); var pepper = KeyMaterial.Random();
+        var key = KeyMaterial.Random();
+        var pepper = KeyMaterial.Random();
         Assert.True(CryptographicOperations.FixedTimeEquals(KeyMaterial.Digest(key, pepper), KeyMaterial.Digest(key, pepper)));
         Assert.False(CryptographicOperations.FixedTimeEquals(KeyMaterial.Digest(key, pepper), KeyMaterial.Digest(key, KeyMaterial.Random())));
         Assert.DoesNotContain(key, Convert.ToHexString(KeyMaterial.Digest(key, pepper)), StringComparison.OrdinalIgnoreCase);
     }
+
     [Fact]
     public void PasswordsAreSaltedIdentityHashes()
     {
-        var h = new PasswordHasher<string>(); var a = h.HashPassword("user", "password-long-enough"); var b = h.HashPassword("user", "password-long-enough");
-        Assert.NotEqual(a, b); Assert.Equal(PasswordVerificationResult.Success, h.VerifyHashedPassword("user", a, "password-long-enough"));
+        var h = new PasswordHasher<string>();
+        var a = h.HashPassword("user", "password-long-enough");
+        var b = h.HashPassword("user", "password-long-enough");
+        Assert.NotEqual(a, b);
+        Assert.Equal(PasswordVerificationResult.Success, h.VerifyHashedPassword("user", a, "password-long-enough"));
         Assert.Equal(PasswordVerificationResult.Failed, h.VerifyHashedPassword("user", a, "wrong"));
     }
 }

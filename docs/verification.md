@@ -1,12 +1,12 @@
 # Verification results
 
-Verified locally on 17 November 2026. No cloud resources were created or used by the application.
+Initial checks ran on 17 November 2026; the backend structure refactor was checked on 18 November 2026. No cloud resources were created or used by the application.
 
 | Check | Actual result |
 |---|---|
 | dotnet restore Pulse.slnx | Passed after downloading compatible patched dependencies with network permission |
 | dotnet build Pulse.slnx --no-restore | Passed, 0 warnings and 0 errors, targeting net10.0 with SDK 11.0.100 |
-| dotnet test Pulse.slnx --no-build | 24 unit tests passed; 1 Docker integration test explicitly skipped |
+| dotnet test Pulse.slnx --no-build | 31 unit tests passed after the backend refactor; 1 Docker integration test explicitly skipped |
 | npm install in frontend/pulse-dashboard | Passed using workspace-local Node 22.16.0 and npm 10.9.2 |
 | npm run generate:api | Passed against the document exported by the running API |
 | npm run build in frontend/pulse-dashboard | Passed (TypeScript and Vite) |
@@ -16,6 +16,8 @@ Verified locally on 17 November 2026. No cloud resources were created or used by
 | GET /health/live | HTTP 200 with status live |
 | Anonymous GET /v1/admin/tenants | HTTP 401 as expected |
 | PowerShell setup script syntax | Passed PowerShell parser checks |
+| Refactored API route compatibility | All 31 HTTP operations preserved; OpenAPI schema names preserved |
+| Refactored API authorization smoke checks | Tenant, device, rule and alert routes returned 401 for anonymous requests; liveness returned 200 |
 | GET /openapi/v1.json in explicit local export mode | HTTP 200; generated document and frontend types checked in |
 | Docker Compose health, EF migration application, native schema checks | Not run: Docker executable/engine absent |
 | Testcontainers concurrency/RLS/key/refresh integration | Skipped: requires Docker and PULSE_RUN_INTEGRATION=1 |
