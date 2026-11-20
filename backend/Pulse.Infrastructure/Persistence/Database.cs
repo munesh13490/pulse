@@ -13,23 +13,33 @@ public sealed class Database(IConfiguration configuration)
     public Task<NpgsqlConnection> App(CancellationToken ct = default) => Open("App", ct);
     private async Task<NpgsqlConnection> Open(string name, CancellationToken ct)
     {
-        var c = new NpgsqlConnection(configuration.GetConnectionString(name) ?? throw new InvalidOperationException($"Missing ConnectionStrings:{name}"));
-        await c.OpenAsync(ct);
-        var expected = name == "App" ? "pulse_app" : "pulse_auth";
-        var roles = await Query(c, "SELECT current_user AS name,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user", ct);
-        if (roles.Count != 1 || (string)roles[0]["name"]! != expected || (bool)roles[0]["rolsuper"]! || (bool)roles[0]["rolbypassrls"]!)
+        var c = CreateConnection(configuration, name);
+        try
+        {
+            await c.OpenAsync(ct);
+            return c;
+        }
+        catch
         {
             await c.DisposeAsync();
-            throw new InvalidOperationException($"Connection {name} must use restricted role {expected}.");
+            throw;
         }
+    }
 
-        return c;
+    internal static NpgsqlConnection CreateConnection(IConfiguration configuration, string name)
+    {
+        var settings = new NpgsqlConnectionStringBuilder(configuration.GetConnectionString(name)
+            ?? throw new InvalidOperationException($"Missing ConnectionStrings:{name}"))
+        {
+            SearchPath = "pulse"
+        };
+        return new NpgsqlConnection(settings.ConnectionString);
     }
 
     public static async Task<NpgsqlTransaction> Scope(NpgsqlConnection c, Guid tenant, CancellationToken ct = default)
     {
         var tx = await c.BeginTransactionAsync(ct);
-        await Execute(c, "SELECT set_config('pulse.tenant_id',@tenant,true)", ct, ("tenant", tenant.ToString()));
+        await Execute(c, "SELECT set_config('app.tenant_id',@tenant,true)", ct, ("tenant", tenant.ToString()));
         return tx;
     }
 

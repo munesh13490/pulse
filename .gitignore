@@ -6,6 +6,7 @@
 .env.*
 !.env.example
 .local/
+/backend/Pulse.Api/appsettings.json
 **/TestResults/
 **/playwright-report/
 **/test-results/

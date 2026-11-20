@@ -10,7 +10,7 @@ public sealed class TenantJobRunner(Database db, ILogger<TenantJobRunner> logger
         try
         {
             await using var auth = await db.Auth(ct);
-            var tenants = await Database.Query(auth, "SELECT id FROM tenants", ct);
+            var tenants = await Database.Query(auth, "SELECT tenant_id AS id FROM tenants WHERE is_active", ct);
             foreach (var t in tenants)
             {
                 var tenant = (Guid)t["id"]!;

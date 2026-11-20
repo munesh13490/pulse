@@ -8,6 +8,16 @@ $auth=New-Secret
 $jwt=New-Secret
 $hmac=New-Secret
 $password=New-Secret
+$settingsPath=Join-Path $PSScriptRoot '../../backend/Pulse.Api/appsettings.json'
+$settings=if(Test-Path -LiteralPath $settingsPath) {
+    Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json -AsHashtable
+} else { @{} }
+$settings['ConnectionStrings'] = @{
+    App = "Host=localhost;Database=pulse;Username=pulse_app;Password=$app"
+    Auth = "Host=localhost;Database=pulse;Username=pulse_auth;Password=$auth"
+    Migration = "Host=localhost;Database=pulse;Username=postgres;Password=$admin"
+    Redis = 'localhost:6379,abortConnect=false'
+}
 @"
 POSTGRES_PASSWORD=$admin
 PULSE_APP_PASSWORD=$app
@@ -23,4 +33,5 @@ Bootstrap__Username=local-admin
 Bootstrap__Password=$password
 ASPNETCORE_URLS=http://localhost:5080
 "@ | Set-Content -LiteralPath $target
-Write-Output 'Created ignored .env with random local secrets. Retrieve the initial password locally and remove Bootstrap__Password after bootstrap.'
+$settings | ConvertTo-Json -Depth 32 | Set-Content -LiteralPath $settingsPath
+Write-Output 'Created ignored .env and configured API connection strings in appsettings.json. Retrieve the initial password from .env and remove Bootstrap__Password after bootstrap.'

@@ -9,6 +9,16 @@ try {
   await pg.exec(await readFile(new URL('../scripts/'+script+'.sql',import.meta.url),'utf8'));
   console.log(script+': PASS');
  }
+ const userId = randomUUID();
+ await pg.transaction(async tx => {
+  await tx.query("INSERT INTO app_users(id,user_name,normalized_user_name,password_hash) VALUES ($1,'legacy','LEGACY','test-hash')", [userId]);
+  await tx.query("INSERT INTO app_user_roles(id,user_id,role_id) SELECT $1,$2,id FROM app_roles WHERE name='viewer'", [randomUUID(), userId]);
+  await tx.exec(await readFile(new URL('../scripts/007_single_user_role.sql',import.meta.url),'utf8'));
+  const {rows} = await tx.query('SELECT u.email, r.name, r.role_name, r.is_active FROM app_users u JOIN app_roles r ON r.id=u.role_id WHERE u.id=$1', [userId]);
+  assert.deepEqual(rows, [{email:'', name:'viewer', role_name:'Viewer', is_active:true}]);
+  await tx.query('DELETE FROM app_users WHERE id=$1', [userId]);
+ });
+ console.log('007_single_user_role (existing user backfill): PASS');
  for(const script of ['schema_checks','tenant_isolation_checks','concurrency_checks']){
   await pg.exec(await readFile(new URL(script+'.sql',import.meta.url),'utf8'));
   console.log(script+': PASS');

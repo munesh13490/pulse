@@ -1,3 +1,8 @@
-The executable migration is [Initial.cs](../../backend/Pulse.Infrastructure/Migrations/Initial.cs).
-It embeds scripts 002–006 verbatim; a unit test checks all five resources exist in deployment order.
-Use the API --migrate command. Do not apply standalone scripts on an already migrated schema.
+EF Core applies [Initial](../../backend/Pulse.Infrastructure/Migrations/Initial.cs) with scripts 002–006, then [SingleUserRole](../../backend/Pulse.Infrastructure/Migrations/SingleUserRole.cs) with script 007.
+Use the API `--migrate` command. When reproducing the schema from SQL alone, run script 007 in a transaction. Do not apply standalone scripts on an already migrated schema.
+
+Each user has a required `app_users.role_id` foreign key. The migration backfills it from existing assignments and stops if any user has zero or multiple roles. Pulse reads authorization from this foreign key and writes the matching `app_user_roles` row in the same transaction for compatibility. Existing usernames still work, and users without an email have an empty email value.
+
+[PulseSchema](../../backend/Pulse.Infrastructure/Migrations/PulseSchema.cs) adds the schema from the supplied local database definition. Runtime queries use the `pulse` schema and the `app.tenant_id` transaction setting. Scripts 008 and 009 provide the baseline and the additional refresh-token, suppression, and alert idempotency storage. An existing `pulse` installation must already have `roles` and `app_users.role_id` from the revised identity schema. The migration leaves data in the legacy `public` tables in place. The existing login request's `username` field now accepts the user's email.
+
+Use the existing database's restricted tenant role for `App` and its trusted credential and administration role for `Auth`. Schema alignment does not grant those roles additional access. The attached telemetry table is unpartitioned, so the legacy partition retention worker is disabled.

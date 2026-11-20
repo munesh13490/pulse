@@ -16,7 +16,7 @@ public sealed class PostgreSqlDeviceCredentialValidator(Database db, ISecretProv
         if (parts.Length != 2 || !Guid.TryParse(parts[0], out var id) || parts[1].Length != 64)
             return null;
         await using var c = await db.Auth(ct);
-        var rows = await Database.Query(c, "SELECT * FROM lookup_device_key(@id)", ct, ("id", id));
+        var rows = await Database.Query(c, "SELECT k.tenant_id,k.device_id,k.key_digest AS digest FROM device_api_keys k JOIN devices d USING (tenant_id,device_id) WHERE k.key_id=@id AND k.revoked_at IS NULL AND (k.expires_at IS NULL OR k.expires_at>now()) AND d.status='ACTIVE'", ct, ("id", id));
         if (rows.Count != 1)
             return null;
         var row = rows[0];

@@ -17,6 +17,7 @@ erDiagram
     app_users {
         uuid id
         uuid tenant_id
+        uuid role_id FK
         varchar_256_ user_name
         varchar_256_ normalized_user_name
         varchar_256_ email
@@ -39,6 +40,10 @@ erDiagram
         varchar_256_ name
         varchar_256_ normalized_name
         text concurrency_stamp
+        varchar_256_ role_name
+        text description
+        boolean is_system_role
+        boolean is_active
     }
     app_user_roles {
         uuid id
@@ -181,6 +186,7 @@ erDiagram
     }
     tenants ||--o{ tenant_rate_limits : references
     tenants ||--o{ app_users : references
+    app_roles ||--o{ app_users : assigns
     app_users ||--o{ app_user_roles : references
     app_roles ||--o{ app_user_roles : references
     app_users ||--o{ app_user_claims : references
