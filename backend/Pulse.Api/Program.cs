@@ -19,8 +19,10 @@ var app = builder.Build();
 if (await app.RunSetupCommandAsync(args))
     return;
 app.UsePulseMiddleware();
-if (app.Environment.IsDevelopment())
-{
+var isDevelopment = app.Environment.IsDevelopment();
+var enableHostedSwagger = !isDevelopment && app.Configuration.GetValue("OpenApi:EnableSwaggerUi", true);
+//if (isDevelopment)
+//{
     app.Use(async (context, next) =>
     {
         var path = context.Request.Path;
@@ -32,10 +34,18 @@ if (app.Environment.IsDevelopment())
         }
         await next(context);
     });
-    app.UseSwaggerUI(options => options.SwaggerEndpoint("../openapi/v1.json", "Pulse API v1"));
-}
+//}
+//if (isDevelopment || enableHostedSwagger)
+//{
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("../openapi/v1.json", "Pulse API v1");
+    });
+//}
 var openApi = app.MapOpenApi();
-if (!app.Environment.IsDevelopment() && !args.Contains("--export-openapi"))
+if (enableHostedSwagger)
+    openApi.AllowAnonymous();
+else if (!isDevelopment && !args.Contains("--export-openapi"))
     openApi.RequireAuthorization("admin");
 app.MapPulseEndpoints();
 app.Run();
