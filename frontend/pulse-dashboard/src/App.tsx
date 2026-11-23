@@ -1,95 +1,41 @@
-import {useEffect,useState,type FormEvent,type ReactNode} from 'react';
-import {Link,Navigate,Route,Routes,useLocation} from 'react-router-dom';
-import {useQuery,useQueryClient} from '@tanstack/react-query';
-import {Alert,AppBar,Box,Button,Chip,Container,Dialog,DialogContent,DialogTitle,Divider,LinearProgress,MenuItem,Paper,Stack,Table,TableBody,TableCell,TableHead,TableRow,TextField,Toolbar,Typography} from '@mui/material';
-import {Line,LineChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
-import {api,clearTokens,client,logout,setTokens,stream} from './api/client';
+import {useEffect,useState,type ReactNode} from 'react';
+import {Navigate,Route,Routes,useLocation,useNavigate} from 'react-router-dom';
+import {useQueryClient} from '@tanstack/react-query';
+import {AppBar,Avatar,Box,Button,Chip,Container,Divider,Drawer,IconButton,LinearProgress,List,ListItemButton,ListItemIcon,ListItemText,Stack,Toolbar,Typography} from '@mui/material';
+import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
+import DevicesOutlined from '@mui/icons-material/DevicesOutlined';
+import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined';
+import RuleOutlined from '@mui/icons-material/RuleOutlined';
+import PeopleOutline from '@mui/icons-material/PeopleOutline';
+import KeyOutlined from '@mui/icons-material/KeyOutlined';
+import Brightness4Outlined from '@mui/icons-material/Brightness4Outlined';
+import LogoutOutlined from '@mui/icons-material/LogoutOutlined';
+import SensorsOutlined from '@mui/icons-material/SensorsOutlined';
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import ApartmentOutlined from '@mui/icons-material/ApartmentOutlined';
+import {api,clearTokens,logout} from './api/client';
+import {AlertsPage,LivePage,RulesPage} from './pages/AlertPages';
+import {SettingsPage,TenantsPage,UsersPage} from './pages/AdministrationPages';
+import {DevicesPage,TelemetryPage} from './pages/DevicePages';
+import {LoginPage} from './pages/LoginPage';
+import {OverviewPage} from './pages/OverviewPage';
+import type {CurrentUser} from './types';
 
-type User={id:string;tenantId:string|null;name:string;roles:string[]};
-type Row=Record<string,unknown>;
-const show=(x:unknown)=>Array.isArray(x)?x.join(', '):x===null?'—':typeof x==='boolean'?(x?'Yes':'No'):String(x??'—');
-export default function App(){
- const [user,setUser]=useState<User|null>(null);const cache=useQueryClient();
- if(!user)return <Login onLogin={setUser}/>;
- const admin=user.roles.some(r=>r==='platform-admin'||r==='tenant-admin');
- const links=[['/','Overview'],...(user.roles.includes('platform-admin')?[['/tenants','Tenants']]:[]),...(admin?[['/users','Users']]:[]),...(user.tenantId?[['/devices','Devices'],['/telemetry','Telemetry'],['/rules','Rules'],['/alerts','Alerts'],['/live','Live feed'],...(user.roles.includes('tenant-admin')?[['/settings','Settings']]:[])]:[])];
- return <><AppBar position="static" color="transparent" elevation={0} sx={{borderBottom:'1px solid #26374a'}}><Toolbar><Typography variant="h5" sx={{fontWeight:800,letterSpacing:3,flex:1}}>◉ PULSE <Chip size="small" label="LOCAL" color="primary" variant="outlined"/></Typography><Typography sx={{mr:3}}>{user.name} · {user.roles.join(', ')}</Typography><Button onClick={async()=>{try{await logout();}finally{clearTokens();cache.clear();setUser(null);}}}>Sign out</Button></Toolbar></AppBar>
- <Box sx={{display:'flex',minHeight:'calc(100vh - 65px)',flexDirection:{xs:'column',md:'row'}}}><Box component="nav" sx={{width:{md:210},p:2,borderRight:'1px solid #26374a',display:'flex',flexDirection:{xs:'row',md:'column'},flexWrap:'wrap',gap:1}}>{links.map(([path,label])=><Nav key={path} path={path}>{label}</Nav>)}</Box><Container maxWidth="xl" sx={{py:5}}>
- <Routes><Route path="/" element={<Overview user={user}/>}/>{user.roles.includes('platform-admin')&&<Route path="/tenants" element={<Tenants/>}/>}
- {admin&&<Route path="/users" element={<Users user={user}/>}/>}
- {user.tenantId&&<><Route path="/devices" element={<Devices user={user}/>}/><Route path="/telemetry" element={<Telemetry/>}/><Route path="/rules" element={<Rules user={user}/>}/><Route path="/alerts" element={<Alerts user={user}/>}/><Route path="/live" element={<Live/>}/>{user.roles.includes('tenant-admin')&&<Route path="/settings" element={<Settings/>}/>}</>}
- <Route path="*" element={<Navigate to="/" replace/>}/></Routes></Container></Box></>;
+const drawerWidth=252;
+type ThemeMode='light'|'dark';
+type NavItem={label:string;path:string;icon:ReactNode;roles?:string[]};
+export default function App({mode,onToggleTheme}:{mode:ThemeMode;onToggleTheme:()=>void}){
+ const [user,setUser]=useState<CurrentUser|null|undefined>(undefined);const cache=useQueryClient();
+ useEffect(()=>{let mounted=true;api<CurrentUser>('/v1/auth/me').then(profile=>mounted&&setUser(profile)).catch(()=>mounted&&setUser(null));return()=>{mounted=false;};},[]);
+ if(user===undefined)return <Container maxWidth="sm" sx={{pt:'12vh'}}><LinearProgress/></Container>;
+ if(!user)return <LoginPage onLogin={setUser}/>;
+ return <AppShell user={user} mode={mode} onToggleTheme={onToggleTheme} onLogout={async()=>{try{await logout();}finally{clearTokens();cache.clear();setUser(null);}}}/>;
 }
-function Nav({path,children}:{path:string;children:ReactNode}){const location=useLocation();return <Button component={Link} to={path} variant={location.pathname===path?'contained':'text'} sx={{justifyContent:'flex-start'}}>{children}</Button>;}
-function Login({onLogin}:{onLogin:(u:User)=>void}){
- const [error,setError]=useState('');const [busy,setBusy]=useState(false);
- async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');const data=new FormData(e.currentTarget);
- try{const result=await client.POST('/v1/auth/login',{body:{username:String(data.get('username')),password:String(data.get('password'))}});
- if(result.error||!result.data)throw new Error('Sign-in failed. Check your credentials.');
- const pair=result.data;setTokens(pair.accessToken!,pair.refreshToken!);onLogin(await api<User>('/v1/auth/me'));}
- catch(ex){setError(String(ex));}finally{setBusy(false);}}
- return <Container maxWidth="sm" sx={{pt:'12vh'}}><Typography variant="h3" sx={{fontWeight:800,letterSpacing:5,mb:1}}>◉ PULSE</Typography><Typography color="text.secondary" sx={{mb:5}}>Your devices. Your data. Running locally.</Typography><Paper sx={{p:4}}><Typography variant="h5" sx={{mb:3}}>Sign in to your workspace</Typography><Box component="form" onSubmit={submit}><Stack spacing={3}>{error&&<Alert severity="error">{error}</Alert>}<TextField label="Username" name="username" required autoComplete="username"/><TextField label="Password" name="password" required type="password" autoComplete="current-password"/><Button type="submit" variant="contained" disabled={busy}>{busy?'Signing in…':'Sign in'}</Button></Stack></Box></Paper><Typography color="text.secondary" sx={{mt:3}}>First run? Create the local platform administrator with the bootstrap command in README.md.</Typography></Container>;
+function AppShell({user,mode,onToggleTheme,onLogout}:{user:CurrentUser;mode:ThemeMode;onToggleTheme:()=>void;onLogout:()=>Promise<void>}){
+ const location=useLocation();const navigate=useNavigate();const tenantScoped=Boolean(user.tenantId);const isPlatformAdmin=user.roles.includes('platform-admin');const isTenantAdmin=user.roles.includes('tenant-admin');const canManage=user.roles.some(role=>role==='platform-admin'||role==='tenant-admin'||role==='operator');
+ const workspace:NavItem[]=[{label:'Overview',path:'/',icon:<DashboardOutlined/>},...(tenantScoped?[{label:'Devices',path:'/devices',icon:<DevicesOutlined/>},{label:'Telemetry',path:'/telemetry',icon:<SensorsOutlined/>},{label:'Alerts',path:'/alerts',icon:<NotificationsActiveOutlined/>},{label:'Live alert feed',path:'/live',icon:<SensorsOutlined/>},{label:'Alert rules',path:'/rules',icon:<RuleOutlined/>,roles:['manager']}]:[])];
+ const administration:NavItem[]=[...(isPlatformAdmin?[{label:'Tenants',path:'/tenants',icon:<ApartmentOutlined/>}]:[]),...(isPlatformAdmin||isTenantAdmin?[{label:'Users & roles',path:'/users',icon:<PeopleOutline/>}]:[]),...(isTenantAdmin?[{label:'Settings',path:'/settings',icon:<SettingsOutlined/>}]:[])];
+ const visible=(item:NavItem)=>!item.roles||canManage;
+ return <Box sx={{display:'flex',minHeight:'100vh'}}><AppBar position="fixed" color="inherit" elevation={0} sx={{borderBottom:1,borderColor:'divider',zIndex:theme=>theme.zIndex.drawer+1}}><Toolbar sx={{gap:2}}><Stack direction="row" alignItems="center" spacing={1.2} sx={{width:{md:drawerWidth-24},minWidth:{md:drawerWidth-24}}}><Avatar variant="rounded" sx={{bgcolor:'primary.main',width:34,height:34}}><SensorsOutlined sx={{color:'#fff'}}/></Avatar><Typography variant="h6" fontWeight={850} letterSpacing={1}>PULSE</Typography></Stack><Chip size="small" label={tenantScoped?'Tenant workspace':'Platform workspace'} variant="outlined" sx={{display:{xs:'none',sm:'inline-flex'}}}/><Box sx={{flexGrow:1}}/><Chip size="small" color="success" label="System online"/><IconButton onClick={onToggleTheme} aria-label="Toggle color theme"><Brightness4Outlined/></IconButton><Typography variant="body2" sx={{display:{xs:'none',sm:'block'}}}>{user.name}</Typography><Button size="small" startIcon={<LogoutOutlined/>} onClick={onLogout}>Sign out</Button></Toolbar></AppBar><Drawer variant="permanent" sx={{width:{md:drawerWidth},flexShrink:0,display:{xs:'none',md:'block'},'& .MuiDrawer-paper':{width:drawerWidth,boxSizing:'border-box',pt:9,px:1.5,borderRight:1,borderColor:'divider',display:'flex',flexDirection:'column'}}}><NavigationSection label="WORKSPACE" items={workspace.filter(visible)} path={location.pathname} onNavigate={navigate}/>{administration.length>0&&<><Divider sx={{my:1.5}}/><NavigationSection label="ADMINISTRATION" items={administration} path={location.pathname} onNavigate={navigate}/></>}<Box sx={{mt:'auto',p:2}}><Divider sx={{mb:2}}/><Typography variant="caption" color="text.secondary">PULSE · DEVICE OPERATIONS</Typography><Typography variant="caption" display="block" color="text.secondary">v1.0 · {mode} mode</Typography></Box></Drawer><Box component="main" sx={{flexGrow:1,minWidth:0,p:{xs:2,sm:3,lg:4},mt:8}}><Box component="nav" sx={{display:{xs:'flex',md:'none'},overflowX:'auto',gap:1,mb:2}}>{workspace.filter(visible).map(item=><Button key={item.path} size="small" variant={location.pathname===item.path?'contained':'outlined'} onClick={()=>navigate(item.path)}>{item.label}</Button>)}</Box><Routes><Route path="/" element={<OverviewPage user={user}/>}/>{isPlatformAdmin&&<Route path="/tenants" element={<TenantsPage/>}/>} {(isPlatformAdmin||isTenantAdmin)&&<Route path="/users" element={<UsersPage user={user}/>}/>} {tenantScoped&&<><Route path="/devices" element={<DevicesPage user={user}/>}/><Route path="/telemetry" element={<TelemetryPage/>}/><Route path="/alerts" element={<AlertsPage user={user}/>}/><Route path="/live" element={<LivePage/>}/>{canManage&&<Route path="/rules" element={<RulesPage user={user}/>}/>} {isTenantAdmin&&<Route path="/settings" element={<SettingsPage/>}/>}</>}<Route path="*" element={<Navigate to="/" replace/>}/></Routes></Box></Box>;
 }
-function Title({title,subtitle}:{title:string;subtitle?:string}){return <Box sx={{mb:4}}><Typography variant="h4" sx={{fontWeight:700}}>{title}</Typography>{subtitle&&<Typography color="text.secondary" sx={{mt:1}}>{subtitle}</Typography>}</Box>;}
-function Data({rows,columns,action}:{rows:Row[];columns:string[];action?:(r:Row)=>ReactNode}){
- if(!rows.length)return <Alert severity="info">No records yet.</Alert>;
- return <Paper sx={{overflowX:'auto'}}><Table><TableHead><TableRow>{columns.map(c=><TableCell key={c}>{c.replaceAll('_',' ')}</TableCell>)}{action&&<TableCell>Actions</TableCell>}</TableRow></TableHead><TableBody>{rows.map((r,i)=><TableRow key={show(r.id??i)}>{columns.map(c=><TableCell key={c} sx={{maxWidth:300,overflowWrap:'anywhere'}}>{show(r[c])}</TableCell>)}{action&&<TableCell>{action(r)}</TableCell>}</TableRow>)}</TableBody></Table></Paper>;
-}
-function List({path,columns,action}:{path:string;columns:string[];action?:(r:Row)=>ReactNode}){const q=useQuery({queryKey:[path],queryFn:()=>api<Row[]>(path)});return q.isPending?<LinearProgress/>:q.error?<Alert severity="error">{q.error.message}</Alert>:<Data rows={q.data} columns={columns} action={action}/>;}
-function Form({children,onSave,label='Save'}:{children:ReactNode;onSave:(data:FormData)=>Promise<void>;label?:string}){
- const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [saved,setSaved]=useState(false);const cache=useQueryClient();
- return <Paper sx={{p:3,mb:3}}><Box component="form" onSubmit={async(e)=>{e.preventDefault();const form=e.currentTarget;setBusy(true);setSaved(false);setError('');try{await onSave(new FormData(form));await cache.invalidateQueries();setSaved(true);}catch(ex){setError(String(ex));}finally{setBusy(false);}}}><Stack spacing={2}>{children}{error&&<Alert severity="error">{error}</Alert>}{saved&&<Alert severity="success">Saved.</Alert>}<Button variant="contained" type="submit" disabled={busy} sx={{alignSelf:'flex-start'}}>{busy?'Saving…':label}</Button></Stack></Box></Paper>;
-}
-const field=(name:string,label:string,type='text',value?:string)=><TextField key={name} name={name} label={label} type={type} defaultValue={value} required fullWidth/>;
-const val=(d:FormData,k:string)=>String(d.get(k)??'');
-const post=(path:string,body:unknown)=>api(path,{method:'POST',body:JSON.stringify(body)});
-function Overview({user}:{user:User}){return <><Title title="Workspace overview" subtitle="Local telemetry and administration"/><Stack direction={{xs:'column',lg:'row'}} spacing={3}>{[['Identity','Local accounts & roles'],['Storage','PostgreSQL · tenant isolation'],['Delivery','Redis · durable database outbox']].map(([name,description])=><Paper key={name} sx={{p:3,flex:1}}><Typography color="primary" variant="overline">{name}</Typography><Typography variant="h6">{description}</Typography></Paper>)}</Stack><Paper sx={{p:4,mt:4}}><Typography variant="h5" sx={{mb:2}}>Welcome, {user.name}</Typography><Typography color="text.secondary">{user.tenantId?'Register a device, issue its API key, and submit telemetry to begin. Configure rules to evaluate your event-time windows.':'Create a tenant, then create its tenant administrator. Sign in as that administrator to register devices and configure telemetry.'}</Typography></Paper><Alert severity="info" sx={{mt:3}}>Telemetry is visible immediately. Alerts finalize after the 72-hour late-event window closes.</Alert></>;}
-function Tenants(){return <><Title title="Tenants" subtitle="Provision isolated local workspaces"/><Form label="Create tenant" onSave={async d=>{await post('/v1/admin/tenants',{name:val(d,'name')});}}>{field('name','Tenant name')}</Form><List path="/v1/admin/tenants" columns={['id','name','created_at']}/></>;}
-function Users({user}:{user:User}){
- const platform=user.roles.includes('platform-admin');const tenants=useQuery({queryKey:['/v1/admin/tenants'],queryFn:()=>api<Row[]>('/v1/admin/tenants'),enabled:platform});const cache=useQueryClient();const [error,setError]=useState('');
- return <><Title title="User administration" subtitle="Create local users and assign tenant roles"/><Form label="Create user" onSave={async d=>{await post('/v1/admin/users',{username:val(d,'username'),password:val(d,'password'),role:val(d,'role'),tenantId:platform?(val(d,'tenant')||null):user.tenantId});}}>
- {field('username','Username')}{field('password','Initial password (12+ characters)','password')}
- <TextField select name="role" label="Role" defaultValue="viewer">{[...(platform?['platform-admin']:[]),'tenant-admin','operator','viewer'].map(r=><MenuItem key={r} value={r}>{r}</MenuItem>)}</TextField>
- {platform&&<TextField select name="tenant" label="Tenant" defaultValue=""><MenuItem value="">No tenant (platform-admin only)</MenuItem>{tenants.data?.map(t=><MenuItem key={show(t.id)} value={show(t.id)}>{show(t.name)}</MenuItem>)}</TextField>}</Form>
- {error&&<Alert severity="error">{error}</Alert>}<List path="/v1/admin/users" columns={['id','user_name','roles','disabled']} action={r=><Button disabled={Boolean(r.disabled)||r.id===user.id} onClick={async()=>{try{await post('/v1/admin/users/'+r.id+'/disable',{});await cache.invalidateQueries();}catch(ex){setError(String(ex));}}}>Disable</Button>}/></>;
-}
-function Devices({user}:{user:User}){
- const operate=user.roles.some(r=>r==='tenant-admin'||r==='operator');const [device,setDevice]=useState<Row|null>(null);
- return <><Title title="Devices" subtitle="Register sensors and manage their credentials"/>{operate&&<Form label="Register device" onSave={async d=>{await post('/v1/devices',{name:val(d,'name')});}}>{field('name','Device name')}</Form>}<List path="/v1/devices" columns={['id','name','enabled','created_at']} action={operate?r=><Button onClick={()=>setDevice(r)}>Manage</Button>:undefined}/>
- <Dialog open={!!device} onClose={()=>setDevice(null)} fullWidth maxWidth="md"><DialogTitle>{show(device?.name)} · device management</DialogTitle><DialogContent>{device&&<DeviceDetail key={show(device.id)} device={device}/>}</DialogContent></Dialog></>;
-}
-function DeviceDetail({device}:{device:Row}){
- const [key,setKey]=useState('');const [error,setError]=useState('');const cache=useQueryClient();const id=String(device.id);
- return <><Form label="Update device" onSave={async d=>{await api('/v1/devices/'+id,{method:'PATCH',body:JSON.stringify({name:val(d,'name'),enabled:val(d,'enabled')==='true'})});}}>
- {field('name','Name','text',show(device.name))}<TextField select name="enabled" label="Enabled" defaultValue={String(device.enabled)}><MenuItem value="true">Enabled</MenuItem><MenuItem value="false">Disabled</MenuItem></TextField></Form>
- <Form label="Issue / rotate key" onSave={async d=>{const result=await api<{apiKey:string}>('/v1/devices/'+id+'/keys',{method:'POST',body:JSON.stringify({expiresAt:new Date(val(d,'expiry')).toISOString()})});setKey(result.apiKey);}}>{field('expiry','Key expiry','datetime-local',new Date(Date.now()+86400000*30).toISOString().slice(0,16))}<Typography color="text.secondary">Rotation immediately revokes the previous key.</Typography></Form>
- {key&&<Alert severity="warning" onClose={()=>setKey('')}>Copy this key now. It will not be shown again.<Box component="code" sx={{display:'block',overflowWrap:'anywhere',mt:1}}>{key}</Box></Alert>}
- {error&&<Alert severity="error">{error}</Alert>}<List path={'/v1/devices/'+id+'/keys'} columns={['id','expires_at','revoked_at']} action={r=><Button disabled={!!r.revoked_at} onClick={async()=>{try{await post('/v1/devices/'+id+'/keys/'+r.id+'/revoke',{});await cache.invalidateQueries();}catch(ex){setError(String(ex));}}}>Revoke</Button>}/></>;
-}
-function DeviceSelect({onChange,name='device'}:{onChange?:(s:string)=>void;name?:string}){
- const q=useQuery({queryKey:['/v1/devices'],queryFn:()=>api<Row[]>('/v1/devices')});
- return <TextField fullWidth select name={name} label="Device" defaultValue="" required onChange={e=>onChange?.(e.target.value)}><MenuItem value="" disabled>Select device</MenuItem>{q.data?.map(d=><MenuItem key={show(d.id)} value={show(d.id)}>{show(d.name)}</MenuItem>)}</TextField>;
-}
-function Telemetry(){
- const [device,setDevice]=useState('');const q=useQuery({queryKey:['telemetry',device],queryFn:()=>api<Row[]>('/v1/telemetry?deviceId='+device),enabled:!!device});
- return <><Title title="Telemetry" subtitle="Latest 500 events per device"/><DeviceSelect onChange={setDevice}/>{q.isFetching&&<LinearProgress/>}{q.error&&<Alert severity="error">{q.error.message}</Alert>}{q.data&&<><Paper sx={{p:3,my:3,height:320}}><ResponsiveContainer><LineChart data={[...q.data].reverse()}><XAxis dataKey="occurred_at" hide/><YAxis/><Tooltip/><Line dataKey="value" stroke="#65dfc2" dot={false}/></LineChart></ResponsiveContainer></Paper><Data rows={q.data} columns={['event_id','metric','value','occurred_at']}/></>}</>;
-}
-function Rules({user}:{user:User}){
- const operate=user.roles.some(r=>r==='tenant-admin'||r==='operator');const [versionRule,setVersionRule]=useState<Row|null>(null);const [history,setHistory]=useState<string|null>(null);
- const form=(existing?:Row)=><Form label={existing?'Append immutable version':'Create rule'} onSave={async d=>{await post(existing?'/v1/rules/'+existing.id+'/versions':'/v1/rules',{deviceId:existing?existing.device_id:val(d,'device'),name:existing?existing.name:val(d,'name'),kind:val(d,'kind'),metric:val(d,'metric'),threshold:Number(val(d,'threshold')),windowSeconds:Number(val(d,'window')),suppressionSeconds:Number(val(d,'suppression'))});setVersionRule(null);}}>
- {!existing&&<>{field('name','Rule name')}<DeviceSelect/></>}<TextField select label="Rule type" name="kind" defaultValue={existing?show(existing.kind):'threshold'}><MenuItem value="threshold">Window average threshold</MenuItem><MenuItem value="rate-of-change">Rate per second (last − first) / seconds</MenuItem></TextField>
- {field('metric','Metric','text',existing?show(existing.metric):'temperature')}{field('threshold','Threshold','number',existing?show(existing.threshold):'50')}{field('window','Window seconds','number',existing?show(existing.window_seconds):'300')}{field('suppression','Suppression seconds (creation only)','number','300')}</Form>;
- return <><Title title="Rules & versions" subtitle="Immutable event-time evaluation policies"/>{operate&&form()}<List path="/v1/rules" columns={['name','kind','metric','threshold','version']} action={r=><><Button onClick={()=>setHistory(show(r.id))}>Versions</Button>{operate&&<Button onClick={()=>setVersionRule(r)}>New version</Button>}</>}/>
- <Dialog open={!!versionRule} onClose={()=>setVersionRule(null)} fullWidth><DialogTitle>Append rule version</DialogTitle><DialogContent>{versionRule&&form(versionRule)}</DialogContent></Dialog>
- <Dialog open={!!history} onClose={()=>setHistory(null)} fullWidth maxWidth="md"><DialogTitle>Version history</DialogTitle><DialogContent>{history&&<List path={'/v1/rules/'+history+'/versions'} columns={['version','kind','metric','threshold','window_seconds','created_at']}/>}</DialogContent></Dialog></>;
-}
-function Alerts({user}:{user:User}){
- const [state,setState]=useState('');const [cursor,setCursor]=useState('');const [history,setHistory]=useState<string|null>(null);const [error,setError]=useState('');const cache=useQueryClient();const operate=user.roles.some(r=>r==='tenant-admin'||r==='operator');
- const q=useQuery({queryKey:['alerts',state,cursor],queryFn:()=>api<{items:Row[];next:{before:string;beforeId:string}|null}>('/v1/alerts?state='+state+cursor)});
- return <><Title title="Alerts" subtitle="Review and transition finalized alerts"/><TextField select label="State" value={state} onChange={e=>{setState(e.target.value);setCursor('');}} sx={{minWidth:220,mb:3}}>{['','OPEN','ACKNOWLEDGED','RESOLVED'].map(s=><MenuItem key={s} value={s}>{s||'All states'}</MenuItem>)}</TextField>
- {error&&<Alert severity="error">{error}</Alert>}{q.isPending?<LinearProgress/>:q.error?<Alert severity="error">{q.error.message}</Alert>:<><Data rows={q.data.items} columns={['id','state','message','created_at']} action={r=><><Button onClick={()=>setHistory(show(r.id))}>History</Button>{operate&&['ACKNOWLEDGED','RESOLVED'].filter(s=>r.state==='OPEN'||r.state==='ACKNOWLEDGED'&&s==='RESOLVED').map(s=><Button key={s} onClick={async()=>{try{await post('/v1/alerts/'+r.id+'/transitions',{state:s});await cache.invalidateQueries();}catch(ex){setError(String(ex));}}}>{s==='RESOLVED'?'Resolve':'Acknowledge'}</Button>)}</>}/><Stack direction="row" spacing={2} sx={{mt:2}}><Button onClick={()=>setCursor('')}>Latest</Button><Button disabled={!q.data.next} onClick={()=>{const n=q.data.next!;setCursor('&before='+encodeURIComponent(n.before)+'&beforeId='+n.beforeId);}}>Older alerts</Button></Stack></>}
- <Dialog open={!!history} onClose={()=>setHistory(null)} fullWidth maxWidth="md"><DialogTitle>Alert transitions</DialogTitle><DialogContent>{history&&<List path={'/v1/alerts/'+history+'/transitions'} columns={['from_state','to_state','user_id','created_at']}/>}</DialogContent></Dialog></>;
-}
-function Live(){const [rows,setRows]=useState<Row[]>([]);const [error,setError]=useState('');useEffect(()=>{const abort=new AbortController();stream(abort.signal,data=>setRows(data as Row[])).catch(ex=>{if(!abort.signal.aborted)setError(String(ex));});return ()=>abort.abort();},[]);
- return <><Title title="Live feed" subtitle="Replica-wide Redis notifications with database resynchronization"/>{error?<Alert severity="error">{error} Reopen this page to reconnect.</Alert>:<Chip color="primary" label="Connected · resynchronizing every 15 seconds" sx={{mb:3}}/>}<Data rows={rows} columns={['id','state','message','updated_at']}/></>;}
-function Settings(){const q=useQuery({queryKey:['limits'],queryFn:()=>api<Row[]>('/v1/admin/tenant-rate-limits')});return <><Title title="Tenant settings" subtitle="Shared Redis quotas across all API replicas"/>{q.isPending?<LinearProgress/>:q.error?<Alert severity="error">{q.error.message}</Alert>:<Form onSave={async d=>{await api('/v1/admin/tenant-rate-limits',{method:'PATCH',body:JSON.stringify({requestsPerMinute:Number(val(d,'requests')),eventsPerMinute:Number(val(d,'events'))})});}}>{field('requests','Requests per 60 seconds','number',show(q.data[0]?.requests_per_minute??100))}{field('events','Events per 60 seconds','number',show(q.data[0]?.events_per_minute??10000))}<Divider/><Typography color="text.secondary">Every structurally valid item counts toward the event quota, including duplicates and rejected events. Redis failures close ingestion with HTTP 503.</Typography></Form>}</>;}
+function NavigationSection({label,items,path,onNavigate}:{label:string;items:NavItem[];path:string;onNavigate:(path:string)=>void}){return <><Typography variant="overline" color="text.secondary" sx={{px:2,pt:1}}>{label}</Typography><List dense>{items.map(item=><ListItemButton key={item.path} selected={item.path==='/'?path==='/' :path.startsWith(item.path)} onClick={()=>onNavigate(item.path)} sx={{borderRadius:2,mb:.5}}><ListItemIcon sx={{minWidth:40}}>{item.icon}</ListItemIcon><ListItemText primary={item.label}/></ListItemButton>)}</List></>}
