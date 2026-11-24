@@ -87,6 +87,7 @@ npm test
 This executes SQL in PostgreSQL WASM, including seeded RLS and transition checks. It does not verify Npgsql, real concurrent sessions, Redis or container networking. The SQL file concurrency_checks.sql inspects the unique constraint; true concurrent duplicate submission is covered by the Docker integration test.
 
 ## Schema and OpenAPI
+- [Client design and delivery approach](docs/client-design-and-approach.md).
 - [Every table and column in the ERD](docs/database/erd.md).
 - [Database authority, role boundaries and retention](docs/database/README.md).
 - [SQL scripts](database/scripts/002_create_tables.sql).
