@@ -28,7 +28,7 @@ public static class TelemetryEndpoints
                     IngestionStatus.InvalidBatch =>
                         Results.BadRequest(new { error = "items must contain 1-500 objects" }),
                     IngestionStatus.Unauthorized => Results.Unauthorized(),
-                    _ => Results.StatusCode(429)
+                    _ => Results.StatusCode(StatusCodes.Status429TooManyRequests)
                 };
             });
 

@@ -14,6 +14,8 @@ public sealed class DependencyInjectionTests
         services.AddSingleton(configuration);
         services.AddLogging();
         services.AddPulse(configuration);
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IRequestRateLimiter));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IEventRateLimiter));
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
         using var scope = provider.CreateScope();
         Assert.IsType<UserService>(scope.ServiceProvider.GetRequiredService<IUserService>());
@@ -22,6 +24,8 @@ public sealed class DependencyInjectionTests
         Assert.IsType<DeviceKeyService>(scope.ServiceProvider.GetRequiredService<IDeviceKeyService>());
         Assert.IsType<RuleService>(scope.ServiceProvider.GetRequiredService<IRuleService>());
         Assert.IsType<AlertService>(scope.ServiceProvider.GetRequiredService<IAlertService>());
+        Assert.IsType<TelemetryIngestionService>(
+            scope.ServiceProvider.GetRequiredService<ITelemetryIngestionService>());
         Assert.IsType<LocalIdentityRepository>(scope.ServiceProvider.GetRequiredService<ILocalIdentityRepository>());
     }
 }

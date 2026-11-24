@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pulse.Application;
-using StackExchange.Redis;
+using Pulse.Infrastructure.RateLimiting;
 
 namespace Pulse.Infrastructure.DependencyInjection;
 
@@ -17,10 +17,9 @@ public static class ServiceRegistration
         services.AddScoped<ILocalIdentityRepository, LocalIdentityRepository>();
         services.AddScoped<IDeviceCredentialValidator, PostgreSqlDeviceCredentialValidator>();
         services.AddScoped<ITelemetryRepository, TelemetryRepository>();
-        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis") ?? throw new InvalidOperationException("Missing Redis connection")));
-        services.AddSingleton<IRequestRateLimiter, RedisRequestRateLimiter>();
-        services.AddSingleton<IEventRateLimiter, RedisEventRateLimiter>();
-        services.AddSingleton<INotificationBus, RedisNotificationBus>();
+        services.AddSingleton<InMemoryRateLimiter>();
+        services.AddSingleton<IRequestRateLimiter>(sp => sp.GetRequiredService<InMemoryRateLimiter>());
+        services.AddSingleton<IEventRateLimiter>(sp => sp.GetRequiredService<InMemoryRateLimiter>());
         services.AddSingleton<IObservability, LocalObservability>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
@@ -48,7 +47,6 @@ public static class ServiceRegistration
         });
         services.AddSingleton<TenantJobRunner>();
         services.AddSingleton<RuleEvaluationProcessor>();
-        services.AddSingleton<OutboxProcessor>();
         services.AddSingleton<RollupProcessor>();
         services.AddSingleton<RetentionRepository>();
         services.AddScoped<IHealthProbe, InfrastructureHealthProbe>();
